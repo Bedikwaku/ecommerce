@@ -10,9 +10,14 @@ import {
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import { Product } from "@src/models/product";
 import { PRODUCT_TABLE_NAME } from "./constants";
+import "server-only";
 
 const client = new DynamoDBClient({
-  region: "af-south-1",
+  region: "us-east-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!!,
+  },
 });
 
 const createProduct = async (
@@ -112,6 +117,17 @@ const getProduct = async (id: string) => {
   return unmarshall(response.Item);
 };
 
+const getProducts = async (): Promise<Product[]> => {
+  const command = new ScanCommand({
+    TableName: PRODUCT_TABLE_NAME,
+  });
+  const response = await client.send(command);
+  if (response.Items) {
+    return response.Items.map((item) => unmarshall(item) as Product);
+  }
+  return [];
+};
+
 const isAvailable = async (id: string, quantity: number) => {
   const product = await getProduct(id);
   return product.inventory >= quantity;
@@ -151,6 +167,7 @@ export const ProductService = {
   updateProduct,
   deleteProduct,
   getProduct,
+  getProducts,
   isAvailable,
   searchProducts,
 };
