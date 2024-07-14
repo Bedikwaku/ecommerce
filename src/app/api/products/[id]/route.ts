@@ -1,10 +1,12 @@
 import { ProductService } from "@src/lib/productService";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
-  const { id } = await req.json();
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const product = await ProductService.getProduct(id as string);
+    const product = await ProductService.getProduct(params.id);
     return new NextResponse(JSON.stringify(product), { status: 200 });
   } catch (error) {
     console.error("Failed to get product", error);
@@ -13,6 +15,7 @@ export async function GET(req: NextRequest) {
     });
   }
 }
+
 export async function PUT(req: NextRequest) {
   const { id, name, description, price, inventory } = await req.json();
 

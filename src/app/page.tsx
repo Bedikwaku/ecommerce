@@ -1,19 +1,24 @@
 import Image from "next/image";
 import LoginButton from "@src/components/LoginButton";
+import { ProductService } from "@src/lib/productService";
+import { ProductCard } from "@src/components/ProductCard";
+import { ShoppingCart } from "@src/components/ShoppingCart";
 
-export default function Home() {
+export default async function Home() {
+  const products = await ProductService.getProducts();
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
+    <main className="flex min-h-screen flex-col items-center p-24 gap-4">
       <LoginButton />
-      <form className="flex flex-col items-center justify-center">
-        <input type="text" placeholder="Item Name" className="p-2 m-2" />
-        <input type="number" placeholder="Price" className="p-2 m-2" />
-        <input type="number" placeholder="Quantity" className="p-2 m-2" />
-        <input type="text" placeholder="Description" className="p-2 m-2" />
-        <button type="submit" className="p-2 m-2 bg-blue-500 text-white">
-          Create Item
-        </button>
-      </form>
+      <div className="grid grid-cols-3 gap-4 container">
+        <div id="available-products" className="col-span-2 flex flew-row gap-4">
+          {products.map((product) => (
+            <ProductCard product={product} />
+          ))}
+        </div>
+        <div id="cart" className="col-span-1">
+          <ShoppingCart />
+        </div>
+      </div>
     </main>
   );
 }

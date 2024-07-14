@@ -113,7 +113,6 @@ const getProduct = async (id: string) => {
   if (!response.Item) {
     throw new Error("Product not found");
   }
-  console.log(response);
   return unmarshall(response.Item);
 };
 
