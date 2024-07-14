@@ -1,19 +1,83 @@
-import { CartProduct, ShoppingCart } from "@src/models/shoppingCart";
+import { CartItem, CartProduct, ShoppingCart } from "@src/models/shoppingCart";
 import { Product } from "@src/models/product";
 import { ProductService } from "./productService";
+import {
+  DynamoDBClient,
+  GetItemCommand,
+  PutItemCommand,
+} from "@aws-sdk/client-dynamodb";
+import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
+import { SHOPPING_CART_TABLE_NAME } from "./constants";
+import {
+  DynamoDBDocumentClient,
+  QueryCommandInput,
+  QueryCommand,
+} from "@aws-sdk/lib-dynamodb";
 
-const addItem = (
-  cart: ShoppingCart,
-  product: Product,
-  quantity: number
-): void => {
-  const existingItem = cart.items.find(
-    (item) => item.product.id === product.id
-  );
-  if (existingItem) {
-    existingItem.quantity += quantity;
-  } else {
-    cart.items.push({ product, quantity });
+const client = new DynamoDBClient({
+  region: "us-east-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!!,
+  },
+});
+
+const docClient = DynamoDBDocumentClient.from(client);
+
+const getCart = async (id: string): Promise<CartItem[]> => {
+  const command: QueryCommandInput = {
+    TableName: SHOPPING_CART_TABLE_NAME,
+    KeyConditionExpression: "id = :id",
+    ExpressionAttributeValues: {
+      ":id": id,
+    },
+  };
+  const response = await docClient.send(new QueryCommand(command));
+  console.log(response);
+  if (!response.Items) {
+    return [];
+  }
+  console.log(response.Items);
+  return response.Items.map((item) => {
+    return { productId: item.productId, quantity: item.quantity } as CartItem;
+  });
+};
+
+const getCartItem = async (id: string, productId: string) => {
+  const command = new GetItemCommand({
+    TableName: SHOPPING_CART_TABLE_NAME,
+    Key: marshall({ id, productId }),
+  });
+  const response = await client.send(command);
+  console.log(response);
+  if (!response.Item) {
+    return null;
+  }
+  return unmarshall(response.Item) as CartProduct;
+};
+
+const addItem = async (id: string, productId: string, quantity: number) => {
+  let attempts = 0;
+  const MAX_RETRY = 5;
+  const cartItem = await getCartItem(id, productId);
+  if (cartItem) {
+    quantity += cartItem.quantity;
+  }
+  while (attempts < MAX_RETRY) {
+    const command = new PutItemCommand({
+      TableName: SHOPPING_CART_TABLE_NAME,
+      Item: marshall({ id, productId, quantity }),
+    });
+    try {
+      const res = await client.send(command);
+      console.log(res);
+      return;
+    } catch (error) {
+      attempts++;
+      console.log(`Failed to add item to cart. Attempt ${attempts}`);
+      console.log(error);
+    }
+    console.error("Failed to add item to cart");
   }
 };
 
@@ -39,6 +103,7 @@ const checkout = async (cart: CartProduct[]): Promise<void> => {
 };
 
 export const ShoppingCartService = {
+  getCart,
   addItem,
   removeItem,
   checkout,

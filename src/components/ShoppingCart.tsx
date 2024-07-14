@@ -2,9 +2,35 @@
 import { useCart } from "@src/app/providers";
 import { Product } from "@src/models/product";
 import { CartProduct } from "@src/models/shoppingCart";
+import { useSession } from "next-auth/react";
+import { useEffect } from "react";
 
 export const ShoppingCart = () => {
   const cart = useCart();
+  const { data: session } = useSession();
+  useEffect(() => {
+    if (session && session.user) {
+      const fetchCart = async () => {
+        const res = await fetch("/api/shoppingCart", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const cart = await res.json();
+        console.log("Cart is: ", cart);
+        return cart;
+      };
+      cart.clear();
+      fetchCart().then((cartItems) => {
+        cartItems.forEach((cartProduct: CartProduct) => {
+          console.log("Restoring to cart: ", cartProduct);
+          cart.addToCart(cartProduct, cartProduct.quantity);
+        });
+      });
+    }
+  }, [session]);
+
   console.log(cart.cart);
   return (
     <div>
@@ -25,9 +51,20 @@ export const ShoppingCart = () => {
 
 export const AddToCartButton = ({ product }: { product: CartProduct }) => {
   const cart = useCart();
+
+  const onClick = async () => {
+    cart.addToCart(product);
+    const res = await fetch("/api/shoppingCart", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ productId: product.product.id }),
+    });
+  };
   return (
     <button
-      onClick={() => cart.addToCart(product)}
+      onClick={() => onClick()}
       className="bg-green-600 rounded-full h-8 w-8 text-white text-lg"
     >
       +

@@ -1,3 +1,3 @@
 const PRODUCT_TABLE_NAME = "Products";
-
-export { PRODUCT_TABLE_NAME };
+const SHOPPING_CART_TABLE_NAME = "ShoppingCarts";
+export { PRODUCT_TABLE_NAME, SHOPPING_CART_TABLE_NAME };

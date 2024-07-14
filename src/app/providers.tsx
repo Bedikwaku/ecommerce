@@ -19,9 +19,10 @@ interface Product {
 
 interface CartContextProps {
   cart: CartProduct[];
-  addToCart: (product: CartProduct) => void;
+  addToCart: (product: CartProduct, quantity?: number) => void;
   removeFromCart: (productId: string) => void;
   checkout: () => void;
+  clear: () => void;
 }
 
 const CartContext = createContext<CartContextProps | undefined>(undefined);
@@ -29,7 +30,7 @@ const CartContext = createContext<CartContextProps | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartProduct[]>([]);
 
-  const addToCart = (cartProduct: CartProduct) => {
+  const addToCart = (cartProduct: CartProduct, quantity: number = 1) => {
     setCart((prevCart) => {
       const existingProductIndex = prevCart.findIndex(
         (item) => item.product.id === cartProduct.product.id
@@ -44,7 +45,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return updatedCart;
       } else {
         // Add the new product to the cart
-        return [...prevCart, { ...cartProduct, quantity: 1 }];
+        return [...prevCart, { ...cartProduct, quantity: quantity }];
       }
     });
   };
@@ -60,8 +61,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     console.log("Checkout successful");
   };
 
+  const clear = () => {
+    setCart([]);
+  };
+
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, checkout }}>
+    <CartContext.Provider
+      value={{ cart, addToCart, removeFromCart, checkout, clear }}
+    >
       {children}
     </CartContext.Provider>
   );

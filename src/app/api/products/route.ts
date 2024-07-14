@@ -19,3 +19,15 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function GET() {
+  try {
+    const product = await ProductService.getProducts();
+    return new NextResponse(JSON.stringify(product), { status: 200 });
+  } catch (error) {
+    console.error("Failed to get products", error);
+    return new NextResponse(JSON.stringify({ error: "Product not found" }), {
+      status: 404,
+    });
+  }
+}

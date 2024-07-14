@@ -5,6 +5,12 @@ export interface CartProduct {
   quantity: number;
 }
 
+export interface CartItem {
+  productId: string;
+  quantity: number;
+}
+
 export interface ShoppingCart {
+  userId: string;
   items: CartProduct[];
 }

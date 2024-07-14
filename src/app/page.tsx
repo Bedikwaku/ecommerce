@@ -12,7 +12,7 @@ export default async function Home() {
       <div className="grid grid-cols-3 gap-4 container">
         <div id="available-products" className="col-span-2 flex flew-row gap-4">
           {products.map((product) => (
-            <ProductCard product={product} />
+            <ProductCard product={product} key={product.id} />
           ))}
         </div>
         <div id="cart" className="col-span-1">
