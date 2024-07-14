@@ -117,6 +117,7 @@ const getProduct = async (id: string) => {
 };
 
 const getProducts = async (): Promise<Product[]> => {
+  console.log("Getting products");
   const command = new ScanCommand({
     TableName: PRODUCT_TABLE_NAME,
   });

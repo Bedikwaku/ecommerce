@@ -9,7 +9,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   return (
     <div
       key={product.id}
-      className="flex bg-slate-700 text-slate-300 flex-col items-start justify-center p-4 rounded"
+      className="flex bg-slate-700 text-slate-300 flex-col items-start justify-center p-4 rounded h-52"
     >
       <h2>
         <strong>Title:</strong> {product.name}
