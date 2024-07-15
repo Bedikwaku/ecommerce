@@ -135,6 +135,16 @@ const getProducts = async (): Promise<Product[]> => {
     TableName: PRODUCT_TABLE_NAME,
   });
   const response = await client.send(command);
+  while (response.LastEvaluatedKey) {
+    console.log("Paginating...");
+    const nextCommand = new ScanCommand({
+      TableName: PRODUCT_TABLE_NAME,
+      ExclusiveStartKey: response.LastEvaluatedKey,
+    });
+    const nextResponse = await client.send(nextCommand);
+    response.Items?.push(...nextResponse.Items!);
+    response.LastEvaluatedKey = nextResponse.LastEvaluatedKey;
+  }
   if (response.Items) {
     return response.Items.map((item) => unmarshall(item) as Product);
   }
