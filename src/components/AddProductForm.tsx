@@ -4,13 +4,14 @@ import { Product } from "@src/models/product";
 import { ChangeEvent, useEffect, useState } from "react";
 
 interface FormProps {
+  id?: string;
   name?: string;
   price?: number;
   quantity?: number;
   description?: string;
 }
 
-export const AddProductForm = (props: FormProps) => {
+const AddProductForm = (props: FormProps) => {
   const [name, setName] = useState(props.name || "");
   const [price, setPrice] = useState(props.price || 0);
   const [quantity, setQuantity] = useState(props.quantity || 0);
@@ -25,6 +26,7 @@ export const AddProductForm = (props: FormProps) => {
 
   return (
     <div className="flex flex-col items-center justify-center text-black border-slate-400 border-4 rounded-lg p-4 m-4 ">
+      <input id="id" type="hidden" value={props.id ?? "new"} />
       <input
         id="name"
         type="text"
@@ -89,6 +91,19 @@ export const ProductForm = ({ products }: { products: Product[] }) => {
     const description = form.elements.namedItem(
       "description"
     ) as HTMLInputElement;
+    const id = form.elements.namedItem("id") as HTMLInputElement;
+    if (id.value !== "new") {
+      await fetch(`/api/products/${id.value}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: name.value,
+          price: parseFloat(price.value),
+          quantity: parseInt(quantity.value),
+          description: description.value,
+        }),
+      });
+      return;
+    }
     await fetch("/api/products", {
       method: "POST",
       body: JSON.stringify({

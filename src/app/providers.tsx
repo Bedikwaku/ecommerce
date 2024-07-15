@@ -20,7 +20,7 @@ interface Product {
 interface CartContextProps {
   cart: CartProduct[];
   addToCart: (product: CartProduct, quantity?: number) => void;
-  removeFromCart: (productId: string) => void;
+  removeFromCart: (productId: string, quantity?: number) => void;
   checkout: () => void;
   clear: () => void;
 }
@@ -40,7 +40,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const updatedCart = [...prevCart];
         updatedCart[existingProductIndex] = {
           ...updatedCart[existingProductIndex],
-          quantity: updatedCart[existingProductIndex].quantity + 1,
+          quantity: updatedCart[existingProductIndex].quantity + quantity,
         };
         return updatedCart;
       } else {
@@ -50,11 +50,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart((prevCart) =>
-      prevCart.filter((cartProduct) => cartProduct.product.id !== productId)
-    );
-    console.log(cart);
+  const removeFromCart = (productId: string, quantity: number = 1) => {
+    setCart((prevCart) => {
+      const existingProductIndex = prevCart.findIndex(
+        (item) => item.product.id === productId
+      );
+      if (existingProductIndex !== -1) {
+        // Copy the existing cart and update the quantity of the existing product
+        const updatedCart = [...prevCart];
+        updatedCart[existingProductIndex] = {
+          ...updatedCart[existingProductIndex],
+          quantity: updatedCart[existingProductIndex].quantity - quantity,
+        };
+        if (updatedCart[existingProductIndex].quantity <= 0) {
+          return updatedCart.filter(
+            (cartProduct) => cartProduct.product.id !== productId
+          );
+        }
+        return updatedCart;
+      }
+      return prevCart; // Add this line to return the previous cart if the condition is not met
+    });
   };
 
   const checkout = () => {

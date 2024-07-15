@@ -1,5 +1,7 @@
 import { ProductService } from "@src/lib/productService";
+import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
+import { authOptions } from "../../auth/[...nextauth]/route";
 
 export async function GET(
   req: NextRequest,
@@ -16,30 +18,41 @@ export async function GET(
   }
 }
 
-export async function PUT(req: NextRequest) {
-  const { id, name, description, price, inventory } = await req.json();
-
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const { name, price, quantity, description } = await req.json();
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+    });
+  }
   try {
     await ProductService.updateProduct(
-      id as string,
-      name as string,
-      description as string,
-      parseFloat(price as string),
-      parseInt(inventory as string)
+      params.id,
+      name,
+      description,
+      price,
+      quantity
     );
-    return new NextResponse(JSON.stringify({ id: id }), { status: 200 });
+    return new NextResponse(JSON.stringify({ id: params.id }), { status: 200 });
   } catch (error) {
     console.error("Failed to update product", error);
     return new NextResponse(
       JSON.stringify({ error: "Product could not be updated" }),
-      { status: 404 }
+      { status: 500 }
     );
   }
 }
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   // delete product
-  const { id } = await req.json();
+  const { id } = params;
   try {
     await ProductService.deleteProduct(id as string);
     return new NextResponse(

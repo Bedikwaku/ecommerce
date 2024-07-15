@@ -53,18 +53,18 @@ export const AddToCartButton = ({ product }: { product: CartProduct }) => {
   const cart = useCart();
 
   const onClick = async () => {
-    cart.addToCart(product);
-    const res = await fetch("/api/shoppingCart", {
+    cart.addToCart(product, 1);
+    await fetch("/api/shoppingCart", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ productId: product.product.id }),
+      body: JSON.stringify({ productId: product.product.id, quantity: 1 }),
     });
   };
   return (
     <button
-      onClick={() => onClick()}
+      onClick={onClick}
       className="bg-green-600 rounded-full h-8 w-8 text-white text-lg"
     >
       +
@@ -74,9 +74,19 @@ export const AddToCartButton = ({ product }: { product: CartProduct }) => {
 
 export const RemoveFromCartButton = ({ productId }: { productId: string }) => {
   const cart = useCart();
+  const onClick = async () => {
+    cart.removeFromCart(productId);
+    await fetch("/api/shoppingCart", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ productId, quantity: -1 }),
+    });
+  };
   return (
     <button
-      onClick={() => cart.removeFromCart(productId)}
+      onClick={onClick}
       className="bg-red-600 rounded-full h-8 w-8 text-white text-lg"
     >
       -

@@ -2,6 +2,7 @@ import { CartItem, CartProduct, ShoppingCart } from "@src/models/shoppingCart";
 import { Product } from "@src/models/product";
 import { ProductService } from "./productService";
 import {
+  DeleteItemCommand,
   DynamoDBClient,
   GetItemCommand,
   PutItemCommand,
@@ -63,11 +64,11 @@ const addItem = async (id: string, productId: string, quantity: number) => {
   if (cartItem) {
     quantity += cartItem.quantity;
   }
+  const command = new PutItemCommand({
+    TableName: SHOPPING_CART_TABLE_NAME,
+    Item: marshall({ id, productId, quantity }),
+  });
   while (attempts < MAX_RETRY) {
-    const command = new PutItemCommand({
-      TableName: SHOPPING_CART_TABLE_NAME,
-      Item: marshall({ id, productId, quantity }),
-    });
     try {
       const res = await client.send(command);
       console.log(res);
@@ -81,8 +82,43 @@ const addItem = async (id: string, productId: string, quantity: number) => {
   }
 };
 
-const removeItem = (cart: ShoppingCart, productId: string): void => {
-  cart.items = cart.items.filter((item) => item.product.id !== productId);
+const removeItem = async (id: string, productId: string, quantity: number) => {
+  let attempts = 0;
+  const MAX_RETRY = 5;
+  const cartItem = await getCartItem(id, productId);
+  if (!cartItem) {
+    return;
+  }
+  quantity = cartItem.quantity - quantity;
+  let command: PutItemCommand | DeleteItemCommand;
+  if (quantity <= 0) {
+    // Delete item from database
+    command = new DeleteItemCommand({
+      TableName: SHOPPING_CART_TABLE_NAME,
+      Key: marshall({ id, productId }),
+    });
+  } else {
+    command = new PutItemCommand({
+      TableName: SHOPPING_CART_TABLE_NAME,
+      Item: marshall({ id, productId, quantity }),
+    });
+  }
+  while (attempts < MAX_RETRY) {
+    try {
+      let res;
+      if (command instanceof DeleteItemCommand) {
+        res = await client.send(command);
+      } else if (command instanceof PutItemCommand) {
+        res = await client.send(command);
+      }
+      console.log(res);
+      return;
+    } catch (error) {
+      attempts++;
+      console.log(`Failed to remove item from cart. Attempt ${attempts}`);
+      console.log(error);
+    }
+  }
 };
 
 const checkout = async (cart: CartProduct[]): Promise<void> => {

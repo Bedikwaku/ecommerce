@@ -6,7 +6,7 @@ import { authOptions } from "../auth/[...nextauth]/route";
 import { CartProduct } from "@src/models/shoppingCart";
 
 export async function POST(req: NextRequest) {
-  const { productId } = await req.json();
+  const { productId, quantity } = await req.json();
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
     return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
@@ -14,12 +14,34 @@ export async function POST(req: NextRequest) {
     });
   }
   try {
-    await ShoppingCartService.addItem(session.user!.email!, productId, 1);
-    return new NextResponse(JSON.stringify({ id: productId }), { status: 201 });
+    if (quantity === 0) {
+      return new NextResponse(JSON.stringify({ error: "Invalid quantity" }), {
+        status: 400,
+      });
+    }
+    if (quantity > 0) {
+      await ShoppingCartService.addItem(
+        session.user!.email!,
+        productId,
+        quantity
+      );
+      return new NextResponse(JSON.stringify({ id: productId }), {
+        status: 201,
+      });
+    } else {
+      await ShoppingCartService.removeItem(
+        session.user!.email!,
+        productId,
+        quantity * -1
+      );
+      return new NextResponse(JSON.stringify({ id: productId }), {
+        status: 200,
+      });
+    }
   } catch (error) {
-    console.error("Failed to create product", error);
+    console.error("Failed to add product to cart", error);
     return new NextResponse(
-      JSON.stringify({ error: "Failed to create product" }),
+      JSON.stringify({ error: "Failed to add product to cart" }),
       { status: 500 }
     );
   }
