@@ -1,6 +1,6 @@
 import LoginButton from "@src/components/LoginButton";
+import { ProductForm } from "@src/components/ProductForm";
 import { ProductService } from "@src/lib/productService";
-import { ProductForm } from "@src/components/AddProductForm";
 
 export default async function Products() {
   const products = await ProductService.getProducts();

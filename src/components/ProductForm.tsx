@@ -85,15 +85,16 @@ export const ProductForm = ({ products }: { products: Product[] }) => {
     event.preventDefault();
     console.log(event);
     const form = event.currentTarget as HTMLFormElement;
+    const id = activeProduct?.id;
     const name = form.elements.namedItem("name") as HTMLInputElement;
     const price = form.elements.namedItem("price") as HTMLInputElement;
     const quantity = form.elements.namedItem("quantity") as HTMLInputElement;
     const description = form.elements.namedItem(
       "description"
     ) as HTMLInputElement;
-    const id = form.elements.namedItem("id") as HTMLInputElement;
-    if (id.value !== "new") {
-      await fetch(`/api/products/${id.value}`, {
+    console.log(activeProduct?.id);
+    if (id && id != "new") {
+      await fetch(`/api/products/${id}`, {
         method: "PATCH",
         body: JSON.stringify({
           name: name.value,
@@ -104,6 +105,7 @@ export const ProductForm = ({ products }: { products: Product[] }) => {
       });
       return;
     }
+
     await fetch("/api/products", {
       method: "POST",
       body: JSON.stringify({
@@ -114,6 +116,23 @@ export const ProductForm = ({ products }: { products: Product[] }) => {
       }),
     });
     form.reset();
+  };
+  const handleDelete = async () => {
+    if (confirm("Are you sure you want to delete this product?") === false)
+      return;
+    if (!activeProduct?.id) {
+      alert("Please select a product to delete.");
+      return;
+    }
+    const response = await fetch(`/api/products/${activeProduct.id}`, {
+      method: "DELETE",
+    });
+    if (response.ok) {
+      alert("Product deleted successfully.");
+      products.splice(products.indexOf(activeProduct), 1);
+    } else {
+      alert("Failed to delete the product.");
+    }
   };
   return (
     <form
@@ -144,8 +163,17 @@ export const ProductForm = ({ products }: { products: Product[] }) => {
           description={activeProduct?.description}
           quantity={activeProduct?.inventory}
         />
+      </div>
+      <div className="flex flex-col items-center justify-center gap-8">
         <button type="submit" className="p-2 m-2 bg-blue-500 text-white">
           Create/Update Item
+        </button>
+        <button
+          type="button"
+          className="p-2 m-2 border-red-500 border-2 bg-red-500 text-white"
+          onClick={handleDelete}
+        >
+          Delete Product
         </button>
       </div>
     </form>

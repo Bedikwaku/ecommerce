@@ -65,27 +65,31 @@ const updateProduct = async (
   inventory?: number
 ) => {
   const updateExpression = [];
+  console.log("Updating product", id);
   const expressionAttributeValues: { [key: string]: any } = {};
   if (name) {
-    updateExpression.push("set name = :name");
+    updateExpression.push("#name = :name");
     expressionAttributeValues[":name"] = name;
   }
   if (description) {
-    updateExpression.push("set description = :description");
+    updateExpression.push("description = :description");
     expressionAttributeValues[":description"] = description;
   }
   if (price) {
-    updateExpression.push("set price = :price");
+    updateExpression.push("price = :price");
     expressionAttributeValues[":price"] = price;
   }
   if (inventory) {
-    updateExpression.push("set inventory = :inventory");
+    updateExpression.push("inventory = :inventory");
     expressionAttributeValues[":inventory"] = inventory;
   }
+  const commandExpression = "SET " + updateExpression.join(", ");
+  console.log("Update expression:", commandExpression);
   const command = new UpdateItemCommand({
     TableName: PRODUCT_TABLE_NAME,
     Key: marshall({ id }),
-    UpdateExpression: updateExpression.join(", "),
+    ExpressionAttributeNames: { "#name": "name" },
+    UpdateExpression: commandExpression,
     ExpressionAttributeValues: marshall(expressionAttributeValues),
     ReturnValues: "UPDATED_NEW",
   });
