@@ -6,6 +6,7 @@ import { ShoppingCart } from "@src/components/ShoppingCart";
 
 export default async function Home() {
   const products = await ProductService.getProducts();
+  console.log("This is for debugging", process.env.NEXTAUTH_SECRET);
   return (
     <main className="flex min-h-screen flex-col items-center p-24 gap-4">
       <LoginButton />
