@@ -2,7 +2,7 @@ import { ProductService } from "@src/lib/productService";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "../../auth/[...nextauth]/utils";
-import { cache } from "../route";
+import { cache } from "../ProductCache";
 
 export async function GET(
   req: NextRequest,
@@ -38,13 +38,13 @@ export async function PATCH(
     });
   }
   try {
-    await ProductService.updateProduct(
-      params.id,
-      name,
-      description,
-      price,
-      quantity
-    );
+    await ProductService.updateProduct({
+      id: params.id,
+      name: name,
+      description: description,
+      price: price,
+      inventory: quantity,
+    });
     cache.incrementVersion();
     return new NextResponse(JSON.stringify({ id: params.id }), { status: 200 });
   } catch (error) {

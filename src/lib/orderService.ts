@@ -13,12 +13,7 @@ const client = new DynamoDBClient({
   },
 });
 
-interface CreateOrderProps {
-  products: CartProduct[];
-  user: string;
-}
-
-const createOrder = async ({ products, user }: CreateOrderProps) => {
+const createOrder = async (user: string, products: CartProduct[]) => {
   // Place order
   const MAX_RETRY = 5;
   const createdAt = new Date().toISOString();
@@ -42,9 +37,10 @@ const createOrder = async ({ products, user }: CreateOrderProps) => {
     });
     try {
       // Place order
+      attempts++;
       const response = await client.send(command);
       console.log(`Order placed: ${order.id}`);
-      attempts++;
+      return order.id;
     } catch (error: any) {
       if (error.name === "ConditionalCheckFailedException") {
         console.log(`ID collision, retrying after ${attempts ** 2} seconds...`);
@@ -54,6 +50,7 @@ const createOrder = async ({ products, user }: CreateOrderProps) => {
       }
     }
   }
+  throw new Error("Failed to create orderw");
 };
 
 export const OrderService = {

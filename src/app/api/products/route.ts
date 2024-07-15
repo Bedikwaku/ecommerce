@@ -1,12 +1,7 @@
 import { ProductService } from "@src/lib/productService";
+import { Product } from "@src/models/product";
 import { NextRequest, NextResponse } from "next/server";
-
-let version = 1;
-
-export const cache = {
-  getVersion: () => version,
-  incrementVersion: () => version++,
-};
+import { cache } from "./ProductCache";
 
 export async function POST(req: NextRequest) {
   const { name, price, quantity, description } = await req.json();
@@ -32,8 +27,10 @@ export async function GET() {
   try {
     // Fetch the current version. In a real app, this might come from Redis or another store.
     const currentVersion = cache.getVersion();
-    const product = await ProductService.getProducts();
-    const response = new NextResponse(JSON.stringify(product), { status: 200 });
+    const products: Product[] = await ProductService.getProducts();
+    const response = new NextResponse(JSON.stringify(products), {
+      status: 200,
+    });
     // Include the version in the Cache-Control header or as a custom header
     response.headers.set(
       "Cache-Control",

@@ -95,27 +95,25 @@ export const RemoveFromCartButton = ({ productId }: { productId: string }) => {
 
 export const CheckoutButton = () => {
   const cart = useCart();
-  const validateItems = async () => {
-    const validPromises = cart.cart.map(async (cartProduct) => {
-      const res = await fetch(`/api/products/${cartProduct.product.id}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      const product: Product = await res.json();
-      return product.inventory >= cartProduct.quantity;
+  const checkout = async () => {
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ order: cart.cart }),
     });
-    const valid = await Promise.all(validPromises);
-    if (valid.every((item) => item)) {
-      cart.checkout();
+    if (res.ok) {
+      alert("Checkout successful");
+      cart.clear();
     } else {
-      alert("Some items are not available in the desired quantity");
+      const { limitedProducts } = await res.json();
+      alert(`Checkout failed. Understocked products: ${limitedProducts}`);
     }
   };
   return (
     <button
-      onClick={validateItems}
+      onClick={checkout}
       className="bg-blue-600 rounded-md h-8 w-24 text-white text-lg"
     >
       Checkout

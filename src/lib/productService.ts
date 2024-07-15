@@ -56,38 +56,50 @@ const createProduct = async (
   throw new Error("Failed to generate unique ID");
 };
 
-const updateProduct = async (
-  id: string,
-  name?: string,
-  description?: string,
-  price?: number,
-  inventory?: number
-) => {
+interface UpdateProductProps {
+  id: string;
+  name?: string;
+  description?: string;
+  price?: number;
+  inventory?: number;
+}
+const updateProduct = async ({
+  id,
+  name,
+  description,
+  price,
+  inventory,
+}: UpdateProductProps) => {
   const updateExpression = [];
   console.log("Updating product", id);
   const expressionAttributeValues: { [key: string]: any } = {};
+  const expressionAttributeNames: { [key: string]: any } = {};
   if (name) {
     updateExpression.push("#name = :name");
     expressionAttributeValues[":name"] = name;
+    expressionAttributeNames["#name"] = "name";
   }
   if (description) {
-    updateExpression.push("description = :description");
+    updateExpression.push("#description = :description");
     expressionAttributeValues[":description"] = description;
+    expressionAttributeNames["#description"] = "description";
   }
   if (price) {
-    updateExpression.push("price = :price");
+    updateExpression.push("#price = :price");
     expressionAttributeValues[":price"] = price;
+    expressionAttributeNames["#price"] = "price";
   }
   if (inventory) {
-    updateExpression.push("inventory = :inventory");
+    updateExpression.push("#inventory = :inventory");
     expressionAttributeValues[":inventory"] = inventory;
+    expressionAttributeNames["#inventory"] = "inventory";
   }
   const commandExpression = "SET " + updateExpression.join(", ");
   console.log("Update expression:", commandExpression);
   const command = new UpdateItemCommand({
     TableName: PRODUCT_TABLE_NAME,
     Key: marshall({ id }),
-    ExpressionAttributeNames: { "#name": "name" },
+    ExpressionAttributeNames: expressionAttributeNames,
     UpdateExpression: commandExpression,
     ExpressionAttributeValues: marshall(expressionAttributeValues),
     ReturnValues: "UPDATED_NEW",

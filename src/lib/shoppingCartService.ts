@@ -23,7 +23,6 @@ const client = new DynamoDBClient({
 });
 
 const docClient = DynamoDBDocumentClient.from(client);
-
 const getCart = async (id: string): Promise<CartItem[]> => {
   const command: QueryCommandInput = {
     TableName: SHOPPING_CART_TABLE_NAME,
@@ -115,26 +114,26 @@ const removeItem = async (id: string, productId: string, quantity: number) => {
   }
 };
 
-const checkout = async (cart: CartProduct[]): Promise<void> => {
-  // Validate stock availability for each item in the cart
-  for (const item of cart) {
-    const product = await ProductService.getProduct(item.product.id);
-    if (!product.isAvailable(item.quantity)) {
-      throw new Error(
-        `Product ${product.name} is not available in the desired quantity`
-      );
-    }
+const clearCart = async (id: string) => {
+  const cartItems = await getCart(id);
+  if (cartItems.length === 0) {
+    return;
   }
-
-  // Here, you would typically proceed with creating an order record in the database
-  // and deducting the quantities from the inventory, but those steps are omitted for brevity
-
-  console.log("Checkout successful");
+  const productIds = cartItems.map((item) => item.productId);
+  productIds.map(async (productId) => {
+    const command = new DeleteItemCommand({
+      TableName: SHOPPING_CART_TABLE_NAME,
+      Key: marshall({ id, productId }),
+    });
+    await client.send(command);
+  });
+  await Promise.all(productIds);
+  return;
 };
 
 export const ShoppingCartService = {
   getCart,
   addItem,
   removeItem,
-  checkout,
+  clearCart,
 };

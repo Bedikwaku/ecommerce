@@ -1,5 +1,5 @@
 "use client";
-import { CartProduct } from "@src/models/shoppingCart";
+import { CartProduct } from "@src/models/cartProduct";
 import { SessionProvider } from "next-auth/react";
 import { createContext, ReactNode, useContext, useState } from "react";
 
