@@ -83,7 +83,6 @@ export const ProductForm = ({ products }: { products: Product[] }) => {
   };
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.log(event);
     const form = event.currentTarget as HTMLFormElement;
     const id = activeProduct?.id;
     const name = form.elements.namedItem("name") as HTMLInputElement;
@@ -92,7 +91,6 @@ export const ProductForm = ({ products }: { products: Product[] }) => {
     const description = form.elements.namedItem(
       "description"
     ) as HTMLInputElement;
-    console.log(activeProduct?.id);
     if (id && id != "new") {
       await fetch(`/api/products/${id}`, {
         method: "PATCH",

@@ -43,7 +43,6 @@ const createProduct = async (
         ConditionExpression: "attribute_not_exists(id)",
       });
       const response = await client.send(command);
-      console.log(response);
       return product.id;
     } catch (error: any) {
       if (error.name === "ConditionalCheckFailedException") {
@@ -94,7 +93,6 @@ const updateProduct = async (
     ReturnValues: "UPDATED_NEW",
   });
   const response = await client.send(command);
-  console.log(response);
   return id;
 };
 
@@ -104,7 +102,6 @@ const deleteProduct = async (id: string) => {
     Key: marshall({ id }),
   });
   const response = await client.send(command);
-  console.log(response);
   return id;
 };
 

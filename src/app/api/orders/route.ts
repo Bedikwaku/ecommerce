@@ -6,42 +6,37 @@ import { CartProduct } from "@src/models/cartProduct";
 import { authOptions } from "../auth/[...nextauth]/utils";
 
 export async function POST(req: NextRequest) {
-  const { productId, quantity } = await req.json();
   const session = await getServerSession(authOptions);
+  const { order }: { order: CartProduct[] } = await req.json();
   if (!session || !session.user) {
-    return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-    });
+    return new NextResponse(
+      JSON.stringify({ error: "User must be logged in to checkout" }),
+      {
+        status: 401,
+      }
+    );
   }
   try {
-    if (quantity === 0) {
-      return new NextResponse(JSON.stringify({ error: "Invalid quantity" }), {
-        status: 400,
-      });
+    // Validate that all products are in stock
+    const limitedProducts: CartProduct[] = [];
+    for (const item of order) {
+      const product = await ProductService.getProduct(item.product.id);
+      if (product.inventory < item.quantity) {
+        const stockShortage = item.quantity - product.inventory;
+        limitedProducts.push({ ...item, quantity: stockShortage });
+      }
     }
-    if (quantity > 0) {
-      await ShoppingCartService.addItem(
-        session.user!.email!,
-        productId,
-        quantity
+    if (limitedProducts.length > 0) {
+      return new NextResponse(
+        JSON.stringify({ error: "Failed to place order", limitedProducts }),
+        { status: 500 }
       );
-      return new NextResponse(JSON.stringify({ id: productId }), {
-        status: 201,
-      });
-    } else {
-      await ShoppingCartService.removeItem(
-        session.user!.email!,
-        productId,
-        quantity * -1
-      );
-      return new NextResponse(JSON.stringify({ id: productId }), {
-        status: 200,
-      });
     }
+    // Place order
   } catch (error) {
-    console.error("Failed to add product to cart", error);
+    console.error("Failed to place order", error);
     return new NextResponse(
-      JSON.stringify({ error: "Failed to add product to cart" }),
+      JSON.stringify({ error: "Failed to place order" }),
       { status: 500 }
     );
   }

@@ -1,5 +1,4 @@
-import { CartItem, CartProduct, ShoppingCart } from "@src/models/shoppingCart";
-import { Product } from "@src/models/product";
+import { CartItem, CartProduct } from "@src/models/cartProduct";
 import { ProductService } from "./productService";
 import {
   DeleteItemCommand,
@@ -34,11 +33,9 @@ const getCart = async (id: string): Promise<CartItem[]> => {
     },
   };
   const response = await docClient.send(new QueryCommand(command));
-  console.log(response);
   if (!response.Items) {
     return [];
   }
-  console.log(response.Items);
   return response.Items.map((item) => {
     return { productId: item.productId, quantity: item.quantity } as CartItem;
   });
@@ -50,7 +47,6 @@ const getCartItem = async (id: string, productId: string) => {
     Key: marshall({ id, productId }),
   });
   const response = await client.send(command);
-  console.log(response);
   if (!response.Item) {
     return null;
   }
@@ -71,7 +67,6 @@ const addItem = async (id: string, productId: string, quantity: number) => {
   while (attempts < MAX_RETRY) {
     try {
       const res = await client.send(command);
-      console.log(res);
       return;
     } catch (error) {
       attempts++;
@@ -111,7 +106,6 @@ const removeItem = async (id: string, productId: string, quantity: number) => {
       } else if (command instanceof PutItemCommand) {
         res = await client.send(command);
       }
-      console.log(res);
       return;
     } catch (error) {
       attempts++;

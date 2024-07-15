@@ -6,7 +6,7 @@ import {
 import { getServerSession } from "next-auth";
 import CognitoProvider from "next-auth/providers/cognito";
 export const authOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET!!,
   providers: [
     CognitoProvider({
       clientId: process.env.COGNITO_CLIENT_ID as string,

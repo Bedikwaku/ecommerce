@@ -2,14 +2,22 @@ import { ProductService } from "@src/lib/productService";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "../../auth/[...nextauth]/utils";
+import { cache } from "../route";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const currentVersion = cache.getVersion();
     const product = await ProductService.getProduct(params.id);
-    return new NextResponse(JSON.stringify(product), { status: 200 });
+    const response = new NextResponse(JSON.stringify(product), { status: 200 });
+    response.headers.set(
+      "Cache-Control",
+      "public, max-age=300, stale-while-revalidate=600"
+    );
+    response.headers.set("X-Cache-Version", currentVersion.toString());
+    return response;
   } catch (error) {
     console.error("Failed to get product", error);
     return new NextResponse(JSON.stringify({ error: "Product not found" }), {
@@ -37,6 +45,7 @@ export async function PATCH(
       price,
       quantity
     );
+    cache.incrementVersion();
     return new NextResponse(JSON.stringify({ id: params.id }), { status: 200 });
   } catch (error) {
     console.error("Failed to update product", error);
@@ -55,6 +64,7 @@ export async function DELETE(
   const { id } = params;
   try {
     await ProductService.deleteProduct(id as string);
+    cache.incrementVersion();
     return new NextResponse(
       JSON.stringify(`Product ${id} deleted successfully`),
       {

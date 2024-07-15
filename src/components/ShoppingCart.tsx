@@ -1,7 +1,7 @@
 "use client";
 import { useCart } from "@src/app/providers";
 import { Product } from "@src/models/product";
-import { CartProduct } from "@src/models/shoppingCart";
+import { CartProduct } from "@src/models/cartProduct";
 import { useSession } from "next-auth/react";
 import { useEffect } from "react";
 
@@ -31,7 +31,6 @@ export const ShoppingCart = () => {
     }
   }, [session]);
 
-  console.log(cart.cart);
   return (
     <div>
       <h2>Shopping Cart</h2>
