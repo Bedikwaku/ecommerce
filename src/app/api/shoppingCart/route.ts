@@ -2,8 +2,8 @@ import { ProductService } from "@src/lib/productService";
 import { ShoppingCartService } from "@src/lib/shoppingCartService";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
-import { authOptions } from "../auth/[...nextauth]/route";
 import { CartProduct } from "@src/models/shoppingCart";
+import { authOptions } from "../auth/[...nextauth]/utils";
 
 export async function POST(req: NextRequest) {
   const { productId, quantity } = await req.json();
