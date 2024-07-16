@@ -10,9 +10,14 @@ import {
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import { Product } from "@src/models/product";
 import { PRODUCT_TABLE_NAME } from "./constants";
+import "server-only";
 
 const client = new DynamoDBClient({
-  region: "af-south-1",
+  region: "us-east-1",
+  credentials: {
+    accessKeyId: process.env.TABLE_ACCESS_KEY_ID!!,
+    secretAccessKey: process.env.TABLE_SECRET_ACCESS_KEY!!,
+  },
 });
 
 const createProduct = async (
@@ -38,7 +43,6 @@ const createProduct = async (
         ConditionExpression: "attribute_not_exists(id)",
       });
       const response = await client.send(command);
-      console.log(response);
       return product.id;
     } catch (error: any) {
       if (error.name === "ConditionalCheckFailedException") {
@@ -52,40 +56,55 @@ const createProduct = async (
   throw new Error("Failed to generate unique ID");
 };
 
-const updateProduct = async (
-  id: string,
-  name?: string,
-  description?: string,
-  price?: number,
-  inventory?: number
-) => {
+interface UpdateProductProps {
+  id: string;
+  name?: string;
+  description?: string;
+  price?: number;
+  inventory?: number;
+}
+const updateProduct = async ({
+  id,
+  name,
+  description,
+  price,
+  inventory,
+}: UpdateProductProps) => {
   const updateExpression = [];
+  console.log("Updating product", id);
   const expressionAttributeValues: { [key: string]: any } = {};
+  const expressionAttributeNames: { [key: string]: any } = {};
   if (name) {
-    updateExpression.push("set name = :name");
+    updateExpression.push("#name = :name");
     expressionAttributeValues[":name"] = name;
+    expressionAttributeNames["#name"] = "name";
   }
   if (description) {
-    updateExpression.push("set description = :description");
+    updateExpression.push("#description = :description");
     expressionAttributeValues[":description"] = description;
+    expressionAttributeNames["#description"] = "description";
   }
   if (price) {
-    updateExpression.push("set price = :price");
+    updateExpression.push("#price = :price");
     expressionAttributeValues[":price"] = price;
+    expressionAttributeNames["#price"] = "price";
   }
   if (inventory) {
-    updateExpression.push("set inventory = :inventory");
+    updateExpression.push("#inventory = :inventory");
     expressionAttributeValues[":inventory"] = inventory;
+    expressionAttributeNames["#inventory"] = "inventory";
   }
+  const commandExpression = "SET " + updateExpression.join(", ");
+  console.log("Update expression:", commandExpression);
   const command = new UpdateItemCommand({
     TableName: PRODUCT_TABLE_NAME,
     Key: marshall({ id }),
-    UpdateExpression: updateExpression.join(", "),
+    ExpressionAttributeNames: expressionAttributeNames,
+    UpdateExpression: commandExpression,
     ExpressionAttributeValues: marshall(expressionAttributeValues),
     ReturnValues: "UPDATED_NEW",
   });
   const response = await client.send(command);
-  console.log(response);
   return id;
 };
 
@@ -95,7 +114,6 @@ const deleteProduct = async (id: string) => {
     Key: marshall({ id }),
   });
   const response = await client.send(command);
-  console.log(response);
   return id;
 };
 
@@ -108,8 +126,41 @@ const getProduct = async (id: string) => {
   if (!response.Item) {
     throw new Error("Product not found");
   }
-  console.log(response);
   return unmarshall(response.Item);
+};
+
+const getProducts = async (query?: string): Promise<Product[]> => {
+  console.log("Getting products");
+  const command = query
+    ? new ScanCommand({
+        TableName: PRODUCT_TABLE_NAME,
+        ExpressionAttributeNames: {
+          "#name": "name",
+          "#description": "description",
+        },
+        ExpressionAttributeValues: {
+          ":query": { S: query },
+        },
+        FilterExpression:
+          "contains(#name, :query) or contains(#description, :query)",
+      })
+    : new ScanCommand({ TableName: PRODUCT_TABLE_NAME });
+
+  const response = await client.send(command);
+  while (response.LastEvaluatedKey) {
+    console.log("Paginating...");
+    const nextCommand = new ScanCommand({
+      TableName: PRODUCT_TABLE_NAME,
+      ExclusiveStartKey: response.LastEvaluatedKey,
+    });
+    const nextResponse = await client.send(nextCommand);
+    response.Items?.push(...nextResponse.Items!);
+    response.LastEvaluatedKey = nextResponse.LastEvaluatedKey;
+  }
+  if (response.Items) {
+    return response.Items.map((item) => unmarshall(item) as Product);
+  }
+  return [];
 };
 
 const isAvailable = async (id: string, quantity: number) => {
@@ -151,6 +202,7 @@ export const ProductService = {
   updateProduct,
   deleteProduct,
   getProduct,
+  getProducts,
   isAvailable,
   searchProducts,
 };

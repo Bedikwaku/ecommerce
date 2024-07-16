@@ -1,56 +1,139 @@
-import { CartItem, ShoppingCart } from "@src/models/shoppingCart";
-import { Product } from "@src/models/product";
+import { CartItem, CartProduct } from "@src/models/cartProduct";
 import { ProductService } from "./productService";
+import {
+  DeleteItemCommand,
+  DynamoDBClient,
+  GetItemCommand,
+  PutItemCommand,
+} from "@aws-sdk/client-dynamodb";
+import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
+import { SHOPPING_CART_TABLE_NAME } from "./constants";
+import {
+  DynamoDBDocumentClient,
+  QueryCommandInput,
+  QueryCommand,
+} from "@aws-sdk/lib-dynamodb";
 
-const addItem = (
-  cart: ShoppingCart,
-  product: Product,
-  quantity: number
-): void => {
-  const existingItem = cart.items.find(
-    (item) => item.product.id === product.id
-  );
-  if (existingItem) {
-    existingItem.quantity += quantity;
-  } else {
-    cart.items.push({ product, quantity });
+const client = new DynamoDBClient({
+  region: "us-east-1",
+  credentials: {
+    accessKeyId: process.env.TABLE_ACCESS_KEY_ID!!,
+    secretAccessKey: process.env.TABLE_SECRET_ACCESS_KEY!!,
+  },
+});
+
+const docClient = DynamoDBDocumentClient.from(client);
+const getCart = async (id: string): Promise<CartItem[]> => {
+  const command: QueryCommandInput = {
+    TableName: SHOPPING_CART_TABLE_NAME,
+    KeyConditionExpression: "id = :id",
+    ExpressionAttributeValues: {
+      ":id": id,
+    },
+  };
+  const response = await docClient.send(new QueryCommand(command));
+  if (!response.Items) {
+    return [];
+  }
+  return response.Items.map((item) => {
+    return { productId: item.productId, quantity: item.quantity } as CartItem;
+  });
+};
+
+const getCartItem = async (id: string, productId: string) => {
+  const command = new GetItemCommand({
+    TableName: SHOPPING_CART_TABLE_NAME,
+    Key: marshall({ id, productId }),
+  });
+  const response = await client.send(command);
+  if (!response.Item) {
+    return null;
+  }
+  return unmarshall(response.Item) as CartProduct;
+};
+
+const addItem = async (id: string, productId: string, quantity: number) => {
+  let attempts = 0;
+  const MAX_RETRY = 5;
+  const cartItem = await getCartItem(id, productId);
+  if (cartItem) {
+    quantity += cartItem.quantity;
+  }
+  const command = new PutItemCommand({
+    TableName: SHOPPING_CART_TABLE_NAME,
+    Item: marshall({ id, productId, quantity }),
+  });
+  while (attempts < MAX_RETRY) {
+    try {
+      const res = await client.send(command);
+      return;
+    } catch (error) {
+      attempts++;
+      console.log(`Failed to add item to cart. Attempt ${attempts}`);
+      console.log(error);
+    }
+    console.error("Failed to add item to cart");
   }
 };
 
-const removeItem = (cart: ShoppingCart, productId: string): void => {
-  cart.items = cart.items.filter((item) => item.product.id !== productId);
-};
-
-const getItems = (cart: ShoppingCart): CartItem[] => {
-  return cart.items;
-};
-
-const clear = (cart: ShoppingCart): void => {
-  cart.items = [];
-};
-
-const checkout = async (cart: ShoppingCart): Promise<void> => {
-  // Validate stock availability for each item in the cart
-  for (const item of getItems(cart)) {
-    const product = await ProductService.getProduct(item.product.id);
-    if (!product.isAvailable(item.quantity)) {
-      throw new Error(
-        `Product ${product.name} is not available in the desired quantity`
-      );
+const removeItem = async (id: string, productId: string, quantity: number) => {
+  let attempts = 0;
+  const MAX_RETRY = 5;
+  const cartItem = await getCartItem(id, productId);
+  if (!cartItem) {
+    return;
+  }
+  quantity = cartItem.quantity - quantity;
+  let command: PutItemCommand | DeleteItemCommand;
+  if (quantity <= 0) {
+    // Delete item from database
+    command = new DeleteItemCommand({
+      TableName: SHOPPING_CART_TABLE_NAME,
+      Key: marshall({ id, productId }),
+    });
+  } else {
+    command = new PutItemCommand({
+      TableName: SHOPPING_CART_TABLE_NAME,
+      Item: marshall({ id, productId, quantity }),
+    });
+  }
+  while (attempts < MAX_RETRY) {
+    try {
+      let res;
+      if (command instanceof DeleteItemCommand) {
+        res = await client.send(command);
+      } else if (command instanceof PutItemCommand) {
+        res = await client.send(command);
+      }
+      return;
+    } catch (error) {
+      attempts++;
+      console.log(`Failed to remove item from cart. Attempt ${attempts}`);
+      console.log(error);
     }
   }
-
-  // Here, you would typically proceed with creating an order record in the database
-  // and deducting the quantities from the inventory, but those steps are omitted for brevity
-
-  console.log("Checkout successful");
-  clear(cart);
 };
 
-export const shoppingCartService = {
+const clearCart = async (id: string) => {
+  const cartItems = await getCart(id);
+  if (cartItems.length === 0) {
+    return;
+  }
+  const productIds = cartItems.map((item) => item.productId);
+  productIds.map(async (productId) => {
+    const command = new DeleteItemCommand({
+      TableName: SHOPPING_CART_TABLE_NAME,
+      Key: marshall({ id, productId }),
+    });
+    await client.send(command);
+  });
+  await Promise.all(productIds);
+  return;
+};
+
+export const ShoppingCartService = {
+  getCart,
   addItem,
   removeItem,
-  getItems,
-  clear,
-  checkout,
+  clearCart,
 };

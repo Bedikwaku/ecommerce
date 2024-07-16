@@ -1,3 +1,4 @@
-const PRODUCT_TABLE_NAME = "products";
-
-export { PRODUCT_TABLE_NAME };
+const PRODUCT_TABLE_NAME = "Products";
+const SHOPPING_CART_TABLE_NAME = "ShoppingCarts";
+const ORDER_TABLE_NAME = "Orders";
+export { PRODUCT_TABLE_NAME, SHOPPING_CART_TABLE_NAME, ORDER_TABLE_NAME };
