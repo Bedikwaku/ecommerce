@@ -23,11 +23,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const query = req.nextUrl.searchParams.get("q") || undefined;
+  console.log("Query:", query);
   try {
     // Fetch the current version. In a real app, this might come from Redis or another store.
     const currentVersion = cache.getVersion();
-    const products: Product[] = await ProductService.getProducts();
+    const products: Product[] = await ProductService.getProducts(query);
     const response = new NextResponse(JSON.stringify(products), {
       status: 200,
     });

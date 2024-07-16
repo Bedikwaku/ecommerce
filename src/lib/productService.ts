@@ -129,11 +129,23 @@ const getProduct = async (id: string) => {
   return unmarshall(response.Item);
 };
 
-const getProducts = async (): Promise<Product[]> => {
+const getProducts = async (query?: string): Promise<Product[]> => {
   console.log("Getting products");
-  const command = new ScanCommand({
-    TableName: PRODUCT_TABLE_NAME,
-  });
+  const command = query
+    ? new ScanCommand({
+        TableName: PRODUCT_TABLE_NAME,
+        ExpressionAttributeNames: {
+          "#name": "name",
+          "#description": "description",
+        },
+        ExpressionAttributeValues: {
+          ":query": { S: query },
+        },
+        FilterExpression:
+          "contains(#name, :query) or contains(#description, :query)",
+      })
+    : new ScanCommand({ TableName: PRODUCT_TABLE_NAME });
+
   const response = await client.send(command);
   while (response.LastEvaluatedKey) {
     console.log("Paginating...");
